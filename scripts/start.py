@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#coding: UTF-8
+# coding: UTF-8
 
 """
 Starts the seafile/seahub server and watches the controller process. It is
@@ -13,7 +13,7 @@ import shutil
 import sys
 import time
 import re
-import ConfigParser
+import configparser
 
 from utils import (
     call, get_conf, get_install_dir, get_script, get_command_output,
@@ -32,18 +32,21 @@ generated_dir = '/bootstrap/generated'
 installdir = get_install_dir()
 topdir = dirname(installdir)
 
+
 def watch_controller():
     maxretry = 4
     retry = 0
     while retry < maxretry:
-        controller_pid = get_command_output('ps aux | grep seafile-controller | grep -v grep || true').strip()
-        garbage_collector_pid = get_command_output('ps aux | grep /scripts/gc.sh | grep -v grep || true').strip()
+        controller_pid = get_command_output(
+            'ps aux | grep seafile-controller | grep -v grep || true').strip()
+        garbage_collector_pid = get_command_output(
+            'ps aux | grep /scripts/gc.sh | grep -v grep || true').strip()
         if not controller_pid and not garbage_collector_pid:
             retry += 1
         else:
             retry = 0
         time.sleep(5)
-    print 'seafile controller exited unexpectedly.'
+    print('seafile controller exited unexpectedly.')
     sys.exit(1)
 
 
@@ -57,28 +60,26 @@ def apply_code_fixes():
 def update_settings():
     settings = utils.settings.read_them()
     env = utils.settings.from_environment()
-    
+
     utils.settings.update_from_env(settings, env)
     utils.settings.write_them(settings)
-    
-    
+
+
 def update_seafdav_config():
     f = os.path.join(topdir, 'conf', 'seafdav.conf')
     if os.path.exists(f):
-        cp = ConfigParser.ConfigParser()
+        cp = configparser.ConfigParser()
         cp.read(f)
         section_name = 'WEBDAV'
         cp.set(section_name, 'share_name', '/seafdav')
         cp.set(section_name, 'fastcgi', 'false')
         cp.set(section_name, 'port', '8080')
-        cp.set(section_name, 'enabled', "true" if (get_conf('ENABLE_WEBDAV', '0') != '0') else "false")
+        cp.set(section_name, 'enabled', "true" if (
+            get_conf('ENABLE_WEBDAV', '0') != '0') else "false")
         with open(f, "w") as fp:
             cp.write(fp)
-            
-               
 
 
-    
 def main():
     if not exists(shared_seafiledir):
         os.mkdir(shared_seafiledir)
@@ -94,11 +95,11 @@ def main():
     init_seafile_server()
 
     check_upgrade()
-    
+
     apply_code_fixes()
     update_settings()
     update_seafdav_config()
-    
+
     os.chdir(installdir)
 
     admin_pw = {
@@ -109,7 +110,6 @@ def main():
     with open(password_file, 'w') as fp:
         json.dump(admin_pw, fp)
 
-
     try:
         call('{} start'.format(get_script('seafile.sh')))
         call('{} start'.format(get_script('seahub.sh')))
@@ -117,12 +117,13 @@ def main():
         if exists(password_file):
             os.unlink(password_file)
 
-    print 'seafile server is running now.'
+    print('seafile server is running now.')
     try:
         watch_controller()
     except KeyboardInterrupt:
-        print 'Stopping seafile server.'
+        print('Stopping seafile server.')
         sys.exit(0)
+
 
 if __name__ == '__main__':
     setup_logging()
